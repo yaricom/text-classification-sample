@@ -15,7 +15,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 
 def parse_data_corpus(file):
     labels = []
@@ -41,6 +43,7 @@ def build_model_for_corpus(file):
     
     clf = Pipeline([('vect', CountVectorizer(stop_words='english')),
                       ('tfidf', TfidfTransformer()),
+                      ('scaler', StandardScaler(copy=False, with_mean=False)),
                       ('clf', SGDClassifier(loss='hinge', penalty='l2',
                                             alpha=1e-3, random_state=42,
                                             n_iter=5)),
@@ -68,15 +71,20 @@ def search_optimal_parameters(file):
     y = np.array(data_train["target"], dtype=int)
     
     clf = Pipeline([('vect', CountVectorizer(stop_words='english')),
-                      ('tfidf', TfidfTransformer()),
-                      ('clf', SGDClassifier(loss='hinge', penalty='l2',
-                                            alpha=1e-3, random_state=42, 
-                                            n_iter=5)),
+                      ('tfidf', TfidfTransformer(sublinear_tf=True)),
+                      #('scaler', StandardScaler(with_mean=False)),
+                      #('clf', SGDClassifier(loss='hinge', penalty='l2',
+                      #                      alpha=1e-3, random_state=126, 
+                      #                      n_iter=5)),
+                     ('clf', LinearSVC(C=1.0, class_weight=None, dual=True, fit_intercept=True,
+                             intercept_scaling=1, loss='squared_hinge', max_iter=1000,
+                             multi_class='ovr', penalty='l2', random_state=126, tol=0.0001,
+                             verbose=0)),
                     ])
-    parameters = {'vect__ngram_range': [(1, 1), (1, 2)],
+    parameters = {'vect__ngram_range': [(1, 2), (1, 3), (1, 4)],
                   'vect__analyzer': ['word', 'char', 'char_wb'],
                   'tfidf__use_idf': (True, False),
-                  'clf__alpha': (1e-3, 1e-4),
+                  #'clf__alpha': (1e-3, 1e-4),
                  }
     gs_clf = GridSearchCV(clf, parameters, n_jobs=-1)
     gs_clf = gs_clf.fit(X, y)
